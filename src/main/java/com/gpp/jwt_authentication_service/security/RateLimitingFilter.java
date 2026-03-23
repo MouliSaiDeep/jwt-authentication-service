@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -51,16 +52,19 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                 return;
             }
 
-            filterChain.doFilter(request, response);
+            ContentCachingResponseWrapper responseWrapper = new ContentCachingResponseWrapper(response);
+            filterChain.doFilter(request, responseWrapper);
 
-            if (response.getStatus() == HttpServletResponse.SC_UNAUTHORIZED) {
+            if (responseWrapper.getStatus() == HttpServletResponse.SC_UNAUTHORIZED) {
                 ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-                response.setHeader("X-RateLimit-Limit", "5");
-                response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, probe.getRemainingTokens())));
+                responseWrapper.setHeader("X-RateLimit-Limit", "5");
+                responseWrapper.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, probe.getRemainingTokens())));
             } else {
-                response.setHeader("X-RateLimit-Limit", "5");
-                response.setHeader("X-RateLimit-Remaining", String.valueOf(bucket.getAvailableTokens()));
+                responseWrapper.setHeader("X-RateLimit-Limit", "5");
+                responseWrapper.setHeader("X-RateLimit-Remaining", String.valueOf(bucket.getAvailableTokens()));
             }
+
+            responseWrapper.copyBodyToResponse();
         } else {
             filterChain.doFilter(request, response);
         }
