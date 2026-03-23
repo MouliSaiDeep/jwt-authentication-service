@@ -39,7 +39,23 @@ fi
 
 echo "Login successful. Received access and refresh tokens."
 
-echo "3. Accessing protected profile route..."
+echo "3. Verifying token via public endpoint..."
+VERIFY_RESPONSE=$(curl -s -w "\n%{http_code}" -G "$API_URL/api/verify-token" \
+  --data-urlencode "token=$ACCESS_TOKEN")
+
+VERIFY_STATUS=$(echo "$VERIFY_RESPONSE" | tail -n1)
+VERIFY_BODY=$(echo "$VERIFY_RESPONSE" | head -n -1)
+VERIFY_VALID=$(echo "$VERIFY_BODY" | jq -r '.valid')
+
+if [ "$VERIFY_STATUS" != "200" ] || [ "$VERIFY_VALID" != "true" ]; then
+  echo "Token verification failed with status $VERIFY_STATUS"
+  echo "$VERIFY_BODY"
+  exit 1
+fi
+
+echo "Token verified successfully."
+
+echo "4. Accessing protected profile route..."
 PROFILE_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET $API_URL/api/profile \
   -H "Authorization: Bearer $ACCESS_TOKEN")
 
@@ -55,7 +71,7 @@ fi
 echo "Profile accessed successfully:"
 echo "$PROFILE_BODY" | jq '.'
 
-echo "4. Refreshing token..."
+echo "5. Refreshing token..."
 REFRESH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $API_URL/auth/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\": \"$REFRESH_TOKEN\"}")
@@ -77,7 +93,7 @@ fi
 
 echo "Token refreshed successfully. Received new access token."
 
-echo "5. Accessing profile with new token..."
+echo "6. Accessing profile with new token..."
 NEW_PROFILE_RESPONSE=$(curl -s -w "\n%{http_code}" -X GET $API_URL/api/profile \
   -H "Authorization: Bearer $NEW_ACCESS_TOKEN")
 
@@ -89,7 +105,7 @@ fi
 
 echo "Profile accessed successfully with new token."
 
-echo "6. Logging out..."
+echo "7. Logging out..."
 LOGOUT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $API_URL/auth/logout \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\": \"$REFRESH_TOKEN\"}")
@@ -103,7 +119,7 @@ fi
 
 echo "Logout successful."
 
-echo "7. Verifying refresh token is invalid..."
+echo "8. Verifying refresh token is invalid..."
 INVALID_REFRESH_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST $API_URL/auth/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\": \"$REFRESH_TOKEN\"}")

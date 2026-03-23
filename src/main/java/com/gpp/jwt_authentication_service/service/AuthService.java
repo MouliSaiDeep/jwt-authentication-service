@@ -63,7 +63,7 @@ public class AuthService {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password"));
 
-        String jwtToken = jwtService.generateToken(user.getUsername(), Collections.singletonList("ROLE_USER"));
+        String jwtToken = jwtService.generateToken(user.getUsername(), Collections.singletonList("user"));
         String refreshToken = createRefreshToken(user).getToken();
 
         return AuthResponse.builder()
@@ -80,7 +80,7 @@ public class AuthService {
                 .map(this::verifyExpiration)
                 .map(RefreshToken::getUser)
                 .map(user -> {
-                    String token = jwtService.generateToken(user.getUsername(), Collections.singletonList("ROLE_USER"));
+                    String token = jwtService.generateToken(user.getUsername(), Collections.singletonList("user"));
                     return AuthResponse.builder()
                             .token_type("Bearer")
                             .access_token(token)

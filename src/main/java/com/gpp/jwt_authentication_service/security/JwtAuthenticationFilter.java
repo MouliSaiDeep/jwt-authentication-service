@@ -2,6 +2,8 @@ package com.gpp.jwt_authentication_service.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gpp.jwt_authentication_service.service.JwtService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -57,12 +59,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (Exception e) {
+        } catch (ExpiredJwtException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             objectMapper.writeValue(response.getWriter(), Map.of(
                     "error", "token_expired",
-                    "message", "Access token has expired or is invalid."
+                    "message", "Access token has expired."
+            ));
+            return;
+        } catch (JwtException | IllegalArgumentException e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            objectMapper.writeValue(response.getWriter(), Map.of(
+                    "error", "invalid_token",
+                    "message", "Access token is invalid."
             ));
             return;
         }

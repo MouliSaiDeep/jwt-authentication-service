@@ -2,6 +2,8 @@ package com.gpp.jwt_authentication_service.security;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+import io.github.bucket4j.ConsumptionProbe;
+import io.github.bucket4j.EstimationProbe;
 import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -36,19 +38,28 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         if (request.getRequestURI().equals("/auth/login") && request.getMethod().equals("POST")) {
             String ip = request.getRemoteAddr();
             Bucket bucket = resolveBucket(ip);
-            
-            io.github.bucket4j.ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-            if (probe.isConsumed()) {
-                response.setHeader("X-RateLimit-Remaining", String.valueOf(probe.getRemainingTokens()));
-                filterChain.doFilter(request, response);
-            } else {
-                long waitForRefill = probe.getNanosToWaitForRefill() / 1_000_000_000;
+
+            if (bucket.getAvailableTokens() < 1) {
+                EstimationProbe probe = bucket.estimateAbilityToConsume(1);
+                long waitForRefill = Math.max(1, probe.getNanosToWaitForRefill() / 1_000_000_000);
                 response.setStatus(429);
                 response.setHeader("X-RateLimit-Limit", "5");
                 response.setHeader("X-RateLimit-Remaining", "0");
                 response.setHeader("Retry-After", String.valueOf(waitForRefill));
                 response.setContentType("application/json");
                 response.getWriter().write("{\"error\":\"Too Many Requests\",\"message\":\"Rate limit exceeded for login.\"}");
+                return;
+            }
+
+            filterChain.doFilter(request, response);
+
+            if (response.getStatus() == HttpServletResponse.SC_UNAUTHORIZED) {
+                ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
+                response.setHeader("X-RateLimit-Limit", "5");
+                response.setHeader("X-RateLimit-Remaining", String.valueOf(Math.max(0, probe.getRemainingTokens())));
+            } else {
+                response.setHeader("X-RateLimit-Limit", "5");
+                response.setHeader("X-RateLimit-Remaining", String.valueOf(bucket.getAvailableTokens()));
             }
         } else {
             filterChain.doFilter(request, response);
