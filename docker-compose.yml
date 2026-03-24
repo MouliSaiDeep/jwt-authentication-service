@@ -1,5 +1,5 @@
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -11,6 +11,8 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=${DATABASE_URL}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
       - API_PORT=${API_PORT}
       - JWT_PRIVATE_KEY_PATH=${JWT_PRIVATE_KEY_PATH}
       - JWT_PUBLIC_KEY_PATH=${JWT_PUBLIC_KEY_PATH}
