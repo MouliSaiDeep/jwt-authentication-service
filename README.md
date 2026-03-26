@@ -41,8 +41,8 @@ This service supports:
 ```mermaid
 flowchart TD
     Client[Client App / cURL] -->|Register/Login/Refresh/Logout| API[Spring Boot API]
-    Client -->|Bearer Token| Protected[/api/profile]
-    Client -->|Token as query param| Verify[/api/verify-token]
+    Client -->|Bearer Token| Protected["/api/profile"]
+    Client -->|Token as query param| Verify["/api/verify-token"]
 
     API --> AuthController[AuthController]
     API --> HealthController[HealthController]
