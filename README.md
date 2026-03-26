@@ -56,7 +56,7 @@ flowchart TD
     AuthService --> RefreshRepo[RefreshTokenRepository]
     AuthService --> UserRepo
 
-    JwtService --> Keys[RSA Key Pair\nprivate.pem/public.pem]
+    JwtService --> Keys[RSA Key Pair - private.pem/public.pem]
     UserRepo --> DB[(PostgreSQL)]
     RefreshRepo --> DB
 
